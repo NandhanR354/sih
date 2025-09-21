@@ -228,20 +228,13 @@
         }
 
         function openSubject(subjectId) {
-            // Map subject IDs to correct file names
-            const subjectFileMap = {
-                'social_studies': 'social',
-                'mathematics': 'maths',
-                // Add other mappings if necessary
-            };
-
-            const fileId = subjectFileMap[subjectId] || subjectId;
-            window.location.href = `/games/grade_${currentGrade}/${fileId}_game1.json`;
+            // Navigate to subject-specific game selection
+            window.location.href = `/game/grade_${currentGrade}/${subjectId}`;
         }
 
         function playGame(gameId) {
             // Navigate to specific game
-            window.location.href = `/game/grade_${currentGrade}/${gameId}`;
+            window.location.href = `/game/${gameId}`;
         }
     </script>
 </body>

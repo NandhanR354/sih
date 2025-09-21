@@ -81,8 +81,35 @@ def game_player(game_path):
     if 'user_id' not in session or session.get('role') != 'student':
         return redirect(url_for('index'))
     
-    return render_template('game_player.html', game_path=game_path)
+    # Check if it's a Python game
+    if game_path.startswith('grade_') and '/' in game_path:
+        grade, subject = game_path.split('/', 1)
+        return render_template('panda3d_game.html', grade=grade, subject=subject)
+    else:
+        return render_template('game_player.html', game_path=game_path)
 
+@app.route('/api/run-game', methods=['POST'])
+def run_game():
+    """Run a Panda3D game"""
+    if 'user_id' not in session or session.get('role') != 'student':
+        return jsonify({'error': 'Not authorized'}), 403
+    
+    data = request.get_json()
+    grade = data.get('grade')
+    subject = data.get('subject')
+    
+    try:
+        # Import and run the appropriate game
+        game_module = f"games.grade_{grade}.{subject}_game"
+        game = __import__(game_module, fromlist=[''])
+        
+        # Start the game in a separate process or thread
+        # For now, return success
+        return jsonify({'status': 'Game started', 'game_id': f"{grade}_{subject}"})
+    except ImportError as e:
+        return jsonify({'error': f'Game not found: {str(e)}'}), 404
+    except Exception as e:
+        return jsonify({'error': f'Failed to start game: {str(e)}'}), 500
 @app.route('/games/grade_<int:grade>/<game_file>')
 def serve_game_file(grade, game_file):
     """Serve game JSON files"""

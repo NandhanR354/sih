@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panda3D Game - Shiksha Leap</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #000;
+        }
+        
+        .game-header {
+            background: #333;
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .game-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .game-placeholder {
+            text-align: center;
+            color: white;
+            padding: 2rem;
+        }
+        
+        .game-controls {
+            background: #333;
+            padding: 1rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        
+        .control-btn {
+            background: #4A90E2;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .control-btn:hover {
+            background: #357abd;
+        }
+        
+        .control-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <button class="control-btn" onclick="history.back()">← Back</button>
+            <h2>{{ grade.title() }} {{ subject.title() }} Game</h2>
+            <div class="game-stats">
+                Score: <span id="gameScore">0</span> | Time: <span id="gameTime">00:00</span>
+            </div>
+        </div>
+        
+        <div class="game-area">
+            <div class="game-placeholder">
+                <h3>🎮 Panda3D Game Loading...</h3>
+                <p>Grade {{ grade }} - {{ subject.title() }}</p>
+                <div class="spinner" style="margin: 2rem auto;"></div>
+                <p id="gameStatus">Initializing game engine...</p>
+            </div>
+        </div>
+        
+        <div class="game-controls">
+            <button class="control-btn" onclick="startGame()" id="startBtn">Start Game</button>
+            <button class="control-btn" onclick="pauseGame()" id="pauseBtn" disabled>Pause</button>
+            <button class="control-btn" onclick="restartGame()" id="restartBtn" disabled>Restart</button>
+            <button class="control-btn" onclick="showHelp()">Help</button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            isRunning: false,
+            score: 0,
+            startTime: null,
+            timer: null
+        };
+
+        const grade = '{{ grade }}';
+        const subject = '{{ subject }}';
+
+        function updateGameStatus(message) {
+            document.getElementById('gameStatus').textContent = message;
+        }
+
+        function updateTimer() {
+            if (gameState.startTime && gameState.isRunning) {
+                const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('gameTime').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        async function startGame() {
+            try {
+                updateGameStatus('Starting game...');
+                
+                const response = await fetch('/api/run-game', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ grade: grade, subject: subject })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    gameState.isRunning = true;
+                    gameState.startTime = Date.now();
+                    gameState.timer = setInterval(updateTimer, 1000);
+                    
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('pauseBtn').disabled = false;
+                    document.getElementById('restartBtn').disabled = false;
+                    
+                    updateGameStatus('Game is running! Use arrow keys to move, space to jump.');
+                    
+                    // Simulate game progression
+                    simulateGameplay();
+                } else {
+                    updateGameStatus(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                updateGameStatus(`Network error: ${error.message}`);
+            }
+        }
+
+        function pauseGame() {
+            if (gameState.isRunning) {
+                gameState.isRunning = false;
+                clearInterval(gameState.timer);
+                document.getElementById('pauseBtn').textContent = 'Resume';
+                updateGameStatus('Game paused');
+            } else {
+                gameState.isRunning = true;
+                gameState.timer = setInterval(updateTimer, 1000);
+                document.getElementById('pauseBtn').textContent = 'Pause';
+                updateGameStatus('Game resumed');
+            }
+        }
+
+        function restartGame() {
+            gameState.score = 0;
+            gameState.startTime = Date.now();
+            document.getElementById('gameScore').textContent = '0';
+            updateGameStatus('Game restarted');
+        }
+
+        function showHelp() {
+            alert(`${subject.toUpperCase()} GAME CONTROLS:\n\n` +
+                  '• Arrow Keys: Move character\n' +
+                  '• Space: Jump/Action\n' +
+                  '• Enter: Confirm selection\n' +
+                  '• ESC: Pause game\n\n' +
+                  'Complete challenges to earn points!');
+        }
+
+        function simulateGameplay() {
+            // Simulate score increases
+            const scoreInterval = setInterval(() => {
+                if (gameState.isRunning) {
+                    gameState.score += Math.floor(Math.random() * 10) + 5;
+                    document.getElementById('gameScore').textContent = gameState.score;
+                    
+                    // Random game events
+                    const events = [
+                        'Collected power-up!',
+                        'Solved puzzle!',
+                        'Level completed!',
+                        'Bonus points earned!',
+                        'Achievement unlocked!'
+                    ];
+                    
+                    if (Math.random() < 0.3) {
+                        const event = events[Math.floor(Math.random() * events.length)];
+                        updateGameStatus(event);
+                    }
+                }
+            }, 3000);
+
+            // Stop simulation after 2 minutes
+            setTimeout(() => {
+                clearInterval(scoreInterval);
+                if (gameState.isRunning) {
+                    endGame();
+                }
+            }, 120000);
+        }
+
+        function endGame() {
+            gameState.isRunning = false;
+            clearInterval(gameState.timer);
+            
+            updateGameStatus(`Game completed! Final score: ${gameState.score}`);
+            
+            // Log game performance
+            logGamePerformance();
+            
+            setTimeout(() => {
+                if (confirm('Game finished! Play again?')) {
+                    location.reload();
+                } else {
+                    history.back();
+                }
+            }, 2000);
+        }
+
+        async function logGamePerformance() {
+            const gameData = {
+                game_id: `${grade}_${subject}_panda3d`,
+                subject: subject,
+                grade: parseInt(grade.replace('grade_', '')),
+                score: gameState.score,
+                max_score: 1000,
+                time_spent: Math.floor((Date.now() - gameState.startTime) / 1000)
+            };
+
+            try {
+                await fetch('/api/game-log', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(gameData)
+                });
+            } catch (error) {
+                console.error('Error logging game performance:', error);
+            }
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', function(event) {
+            if (!gameState.isRunning) return;
+            
+            switch(event.code) {
+                case 'Space':
+                    event.preventDefault();
+                    updateGameStatus('Jump!');
+                    break;
+                case 'ArrowUp':
+                case 'ArrowDown':
+                case 'ArrowLeft':
+                case 'ArrowRight':
+                    event.preventDefault();
+                    updateGameStatus(`Moving ${event.code.replace('Arrow', '').toLowerCase()}`);
+                    break;
+                case 'Escape':
+                    pauseGame();
+                    break;
+                case 'Enter':
+                    updateGameStatus('Action confirmed!');
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
